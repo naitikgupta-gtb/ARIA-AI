@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARIA Games — 2048</title>
+<style>
+  :root{ --bg:#05070c; --cyan:#4dd8e6; --amber:#e6a94d; --text:#dce8f0; }
+  body{ margin:0; min-height:100vh; background:var(--bg); color:var(--text);
+        font-family:'Courier New', monospace; display:flex; flex-direction:column;
+        align-items:center; padding:30px 16px; }
+  h1{ letter-spacing:3px; color:var(--cyan); }
+  #hud{ display:flex; gap:24px; margin-bottom:12px; font-size:15px; }
+  #board{
+    display:grid; grid-template-columns:repeat(4, 80px); grid-template-rows:repeat(4, 80px);
+    gap:8px; background:#0d1220; border:2px solid #1c2740; border-radius:10px; padding:8px;
+  }
+  .cell{
+    display:flex; align-items:center; justify-content:center;
+    background:#111a2e; border-radius:6px; font-size:24px; font-weight:bold; color:var(--text);
+    transition:background 0.15s;
+  }
+  .cell[data-v="2"]{ background:#16233c; }
+  .cell[data-v="4"]{ background:#1a2c4a; }
+  .cell[data-v="8"]{ background:#e6a94d; color:#05070c; }
+  .cell[data-v="16"]{ background:#e69a4d; color:#05070c; }
+  .cell[data-v="32"]{ background:#e6844d; color:#05070c; }
+  .cell[data-v="64"]{ background:#e6634d; color:#fff; }
+  .cell[data-v="128"], .cell[data-v="256"], .cell[data-v="512"]{ background:#4dd8e6; color:#05070c; }
+  .cell[data-v="1024"], .cell[data-v="2048"]{ background:#b6faff; color:#05070c; }
+  .hint{ color:#7f93ab; font-size:13px; margin-top:14px; }
+  a.back{ color:#7f93ab; margin-top:16px; text-decoration:none; }
+  #overlay{ position:fixed; inset:0; background:rgba(0,0,0,.7); display:none;
+            align-items:center; justify-content:center; flex-direction:column; }
+  #overlay button{ margin-top:14px; padding:10px 22px; background:var(--cyan); border:none;
+                    border-radius:8px; font-weight:bold; cursor:pointer; }
+</style>
+</head>
+<body>
+  <h1>🔢 2048</h1>
+  <div id="hud">
+    <span>Score: <b id="score">0</b></span>
+    <span>Best: <b id="best">0</b></span>
+  </div>
+  <div id="board"></div>
+  <p class="hint">Arrow keys or WASD to slide tiles. Merge equal numbers to reach 2048.</p>
+  <a class="back" href="index.html">← Games Hub</a>
+
+  <div id="overlay">
+    <div id="overlayMsg" style="font-size:22px;">Game Over</div>
+    <button id="restartBtn">Restart</button>
+  </div>
+
+<script>
+const SIZE = 4;
+let grid, score, best, boardEl;
+
+function loadBest(){ return parseInt(localStorage.getItem('aria_2048_best') || '0', 10); }
+function saveBest(v){ try { localStorage.setItem('aria_2048_best', v); } catch(e){} }
+
+function emptyGrid(){ return Array.from({length:SIZE}, () => Array(SIZE).fill(0)); }
+
+function addRandomTile(){
+  const empties = [];
+  for (let r=0;r<SIZE;r++) for (let c=0;c<SIZE;c++) if (grid[r][c]===0) empties.push([r,c]);
+  if (!empties.length) return;
+  const [r,c] = empties[Math.floor(Math.random()*empties.length)];
+  grid[r][c] = Math.random() < 0.9 ? 2 : 4;
+}
+
+function render(){
+  boardEl.innerHTML = '';
+  for (let r=0;r<SIZE;r++) for (let c=0;c<SIZE;c++){
+    const v = grid[r][c];
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    if (v){ cell.dataset.v = v; cell.textContent = v; }
+    boardEl.appendChild(cell);
+  }
+  document.getElementById('score').textContent = score;
+  document.getElementById('best').textContent = best;
+}
+
+function slideRowLeft(row){
+  let vals = row.filter(v => v !== 0);
+  for (let i=0;i<vals.length-1;i++){
+    if (vals[i] === vals[i+1]){
+      vals[i] *= 2; score += vals[i];
+      vals.splice(i+1,1);
+    }
+  }
+  while (vals.length < SIZE) vals.push(0);
+  return vals;
+}
+
+function rotateGrid(g){
+  const out = emptyGrid();
+  for (let r=0;r<SIZE;r++) for (let c=0;c<SIZE;c++) out[c][SIZE-1-r] = g[r][c];
+  return out;
+}
+
+function gridsEqual(a,b){
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function move(dir){
+  const before = JSON.stringify(grid);
+  let rotations = { left:0, up:1, right:2, down:3 }[dir];
+  for (let i=0;i<rotations;i++) grid = rotateGrid(grid);
+  grid = grid.map(slideRowLeft);
+  for (let i=0;i<(4-rotations)%4;i++) grid = rotateGrid(grid);
+
+  if (JSON.stringify(grid) !== before){
+    addRandomTile();
+    if (score > best){ best = score; saveBest(best); }
+    render();
+    checkGameOver();
+  }
+}
+
+function canMove(){
+  for (let r=0;r<SIZE;r++) for (let c=0;c<SIZE;c++){
+    if (grid[r][c] === 0) return true;
+    if (c<SIZE-1 && grid[r][c]===grid[r][c+1]) return true;
+    if (r<SIZE-1 && grid[r][c]===grid[r+1][c]) return true;
+  }
+  return false;
+}
+
+function checkGameOver(){
+  if (!canMove()){
+    document.getElementById('overlayMsg').textContent = `Game Over — Score ${score}`;
+    document.getElementById('overlay').style.display = 'flex';
+  }
+}
+
+function reset(){
+  grid = emptyGrid(); score = 0; best = loadBest();
+  document.getElementById('overlay').style.display = 'none';
+  addRandomTile(); addRandomTile();
+  render();
+}
+
+document.addEventListener('keydown', (e) => {
+  const map = { ArrowLeft:'left', ArrowRight:'right', ArrowUp:'up', ArrowDown:'down',
+                a:'left', d:'right', w:'up', s:'down' };
+  const dir = map[e.key];
+  if (dir){ e.preventDefault(); move(dir); }
+});
+
+document.getElementById('restartBtn').addEventListener('click', reset);
+
+boardEl = document.getElementById('board');
+reset();
+</script>
+</body>
+</html>

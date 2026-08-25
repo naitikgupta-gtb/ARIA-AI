@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARIA Games — Tetris</title>
+<style>
+  :root{ --bg:#05070c; --cyan:#4dd8e6; --amber:#e6a94d; --text:#dce8f0; }
+  body{ margin:0; min-height:100vh; background:var(--bg); color:var(--text);
+        font-family:'Courier New', monospace; display:flex; flex-direction:column;
+        align-items:center; padding:24px 16px; }
+  h1{ letter-spacing:3px; color:var(--cyan); margin-bottom:6px; }
+  #wrap{ display:flex; gap:20px; align-items:flex-start; }
+  canvas{ background:#0d1220; border:2px solid #1c2740; border-radius:8px; }
+  #side{ display:flex; flex-direction:column; gap:14px; min-width:120px; }
+  .box{ background:#0d1220; border:1px solid #1c2740; border-radius:8px; padding:10px; text-align:center; }
+  .box b{ font-size:20px; color:var(--amber); }
+  .hint{ color:#7f93ab; font-size:12px; margin-top:14px; text-align:center; }
+  a.back{ color:#7f93ab; margin-top:16px; text-decoration:none; }
+  #overlay{ position:fixed; inset:0; background:rgba(0,0,0,.7); display:none;
+            align-items:center; justify-content:center; flex-direction:column; }
+  #overlay button{ margin-top:14px; padding:10px 22px; background:var(--cyan); border:none;
+                    border-radius:8px; font-weight:bold; cursor:pointer; }
+</style>
+</head>
+<body>
+  <h1>🧱 TETRIS</h1>
+  <div id="wrap">
+    <canvas id="game" width="240" height="480"></canvas>
+    <div id="side">
+      <div class="box">Score<br><b id="score">0</b></div>
+      <div class="box">Lines<br><b id="lines">0</b></div>
+      <div class="box">Best<br><b id="best">0</b></div>
+    </div>
+  </div>
+  <p class="hint">← → move · ↑ rotate · ↓ soft drop · Space hard drop · P pause</p>
+  <a class="back" href="index.html">← Games Hub</a>
+
+  <div id="overlay">
+    <div id="overlayMsg" style="font-size:22px;">Game Over</div>
+    <button id="restartBtn">Restart</button>
+  </div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const COLS = 12, ROWS = 24, CELL = canvas.width / COLS;
+
+const SHAPES = {
+  I: [[1,1,1,1]],
+  O: [[1,1],[1,1]],
+  T: [[0,1,0],[1,1,1]],
+  S: [[0,1,1],[1,1,0]],
+  Z: [[1,1,0],[0,1,1]],
+  J: [[1,0,0],[1,1,1]],
+  L: [[0,0,1],[1,1,1]],
+};
+const COLORS = { I:'#4dd8e6', O:'#e6a94d', T:'#b58cf0', S:'#5ee68a', Z:'#e65f5f', J:'#5f8ce6', L:'#e6b25f' };
+const KEYS = Object.keys(SHAPES);
+
+let grid, cur, score, lines, best, running, paused, dropTimer;
+
+function loadBest(){ return parseInt(localStorage.getItem('aria_tetris_best') || '0', 10); }
+function saveBest(v){ try { localStorage.setItem('aria_tetris_best', v); } catch(e){} }
+
+function emptyGrid(){ return Array.from({length:ROWS}, () => Array(COLS).fill(null)); }
+
+function spawn(){
+  const k = KEYS[Math.floor(Math.random()*KEYS.length)];
+  const shape = SHAPES[k].map(r => r.slice());
+  cur = { shape, color: COLORS[k], x: Math.floor(COLS/2) - Math.ceil(shape[0].length/2), y: 0 };
+  if (collides(cur.shape, cur.x, cur.y)){ gameOver(); }
+}
+
+function collides(shape, ox, oy){
+  for (let y=0; y<shape.length; y++)
+    for (let x=0; x<shape[y].length; x++)
+      if (shape[y][x]){
+        const gx = ox+x, gy = oy+y;
+        if (gx<0 || gx>=COLS || gy>=ROWS) return true;
+        if (gy>=0 && grid[gy][gx]) return true;
+      }
+  return false;
+}
+
+function merge(){
+  cur.shape.forEach((row,y)=>row.forEach((v,x)=>{
+    if (v){ const gy=cur.y+y, gx=cur.x+x; if (gy>=0) grid[gy][gx]=cur.color; }
+  }));
+}
+
+function clearLines(){
+  let cleared = 0;
+  for (let y=ROWS-1; y>=0; y--){
+    if (grid[y].every(c=>c)){
+      grid.splice(y,1);
+      grid.unshift(Array(COLS).fill(null));
+      cleared++; y++;
+    }
+  }
+  if (cleared){
+    lines += cleared;
+    score += [0,100,300,500,800][cleared] || cleared*200;
+    document.getElementById('score').textContent = score;
+    document.getElementById('lines').textContent = lines;
+  }
+}
+
+function rotate(shape){
+  const rows = shape.length, cols = shape[0].length;
+  const out = Array.from({length:cols}, ()=>Array(rows).fill(0));
+  for (let y=0;y<rows;y++) for (let x=0;x<cols;x++) out[x][rows-1-y] = shape[y][x];
+  return out;
+}
+
+function drop(){
+  if (!running || paused) return;
+  if (!collides(cur.shape, cur.x, cur.y+1)){ cur.y++; }
+  else { merge(); clearLines(); spawn(); }
+  draw();
+}
+
+function hardDrop(){
+  if (!running || paused) return;
+  while (!collides(cur.shape, cur.x, cur.y+1)) cur.y++;
+  merge(); clearLines(); spawn(); draw();
+}
+
+function gameOver(){
+  running = false;
+  if (score > best){ best = score; saveBest(best); }
+  document.getElementById('overlayMsg').textContent = `Game Over — Score ${score}`;
+  document.getElementById('overlay').style.display = 'flex';
+}
+
+function draw(){
+  ctx.fillStyle = '#0d1220';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  grid.forEach((row,y)=>row.forEach((c,x)=>{
+    if (c){ ctx.fillStyle=c; ctx.fillRect(x*CELL,y*CELL,CELL-1,CELL-1); }
+  }));
+  if (cur) cur.shape.forEach((row,y)=>row.forEach((v,x)=>{
+    if (v){ ctx.fillStyle=cur.color; ctx.fillRect((cur.x+x)*CELL,(cur.y+y)*CELL,CELL-1,CELL-1); }
+  }));
+}
+
+function reset(){
+  grid = emptyGrid(); score=0; lines=0; best=loadBest(); running=true; paused=false;
+  document.getElementById('score').textContent = 0;
+  document.getElementById('lines').textContent = 0;
+  document.getElementById('best').textContent = best;
+  document.getElementById('overlay').style.display = 'none';
+  spawn(); draw();
+  clearInterval(dropTimer);
+  dropTimer = setInterval(drop, 600);
+}
+
+document.addEventListener('keydown', (e)=>{
+  if (!running) return;
+  if (e.key === 'p' || e.key === 'P'){ paused = !paused; return; }
+  if (paused) return;
+  if (e.key === 'ArrowLeft' && !collides(cur.shape, cur.x-1, cur.y)) cur.x--;
+  else if (e.key === 'ArrowRight' && !collides(cur.shape, cur.x+1, cur.y)) cur.x++;
+  else if (e.key === 'ArrowDown') drop();
+  else if (e.key === 'ArrowUp'){
+    const r = rotate(cur.shape);
+    if (!collides(r, cur.x, cur.y)) cur.shape = r;
+  } else if (e.key === ' '){ e.preventDefault(); hardDrop(); }
+  draw();
+});
+
+document.getElementById('restartBtn').addEventListener('click', reset);
+
+reset();
+</script>
+</body>
+</html>

@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARIA — Executive Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<div class="hud">
+
+  <!-- Header -->
+  <header class="hud-header">
+    <div class="brand">
+      <span class="brand-mark">◈</span>
+      <span class="brand-name">A R I A</span>
+    </div>
+    <div class="status-cluster">
+      <span class="status-dot" id="statusDot"></span>
+      <span class="status-text" id="statusText">IDLE</span>
+      <button class="power-btn" id="powerBtn" disabled>ENGAGE</button>
+      <button class="gear-btn" id="gearBtn" title="Settings">⚙</button>
+    </div>
+  </header>
+
+  <div class="hud-grid">
+
+    <!-- LEFT COLUMN — status core + memory timeline -->
+    <aside class="col col-left panel">
+      <h2 class="panel-title">Session Core</h2>
+
+      <div class="mini-ring">
+        <svg viewBox="0 0 120 120">
+          <circle class="ring-track" cx="60" cy="60" r="50"></circle>
+          <circle class="ring-fill" id="cpuRing" cx="60" cy="60" r="50"></circle>
+        </svg>
+        <div class="mini-ring-label">
+          <span id="cpuVal">0%</span>
+          <small>CPU</small>
+        </div>
+      </div>
+      <div class="mini-ring">
+        <svg viewBox="0 0 120 120">
+          <circle class="ring-track" cx="60" cy="60" r="50"></circle>
+          <circle class="ring-fill amber" id="ramRing" cx="60" cy="60" r="50"></circle>
+        </svg>
+        <div class="mini-ring-label">
+          <span id="ramVal">0%</span>
+          <small>RAM</small>
+        </div>
+      </div>
+
+      <h2 class="panel-title spaced">Memory Timeline</h2>
+      <div class="timeline" id="timeline">
+        <p class="empty-note">Session events will log here.</p>
+      </div>
+    </aside>
+
+    <!-- CENTER COLUMN — reactive core + console + input dock -->
+    <section class="col col-center">
+
+      <div class="core-stage">
+        <svg class="core-svg" viewBox="0 0 400 400">
+          <defs>
+            <radialGradient id="coreGlowGrad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#e8fdff" stop-opacity="1"/>
+              <stop offset="35%" stop-color="#4dd8e6" stop-opacity="0.85"/>
+              <stop offset="100%" stop-color="#4dd8e6" stop-opacity="0"/>
+            </radialGradient>
+            <linearGradient id="coreFaceGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#12233a"/>
+              <stop offset="100%" stop-color="#0a1526"/>
+            </linearGradient>
+          </defs>
+
+          <!-- static hexagonal framing — deliberately not circles, so ARIA
+               doesn't read as a generic AI-app radar/orb -->
+          <polygon class="hex-frame outer" points="200,30 52.8,115 52.8,285 200,370 347.2,285 347.2,115"></polygon>
+          <polygon class="hex-frame mid" points="200,70 87.4,135 87.4,265 200,330 312.6,265 312.6,135"></polygon>
+
+          <!-- rotating hex with pulsing node ring -->
+          <g class="hex-rotor">
+            <polygon class="hex-frame scan" points="200,50 70.1,125 70.1,275 200,350 329.9,275 329.9,125"></polygon>
+            <circle class="hex-node" style="animation-delay:0s"   cx="200"   cy="50"  r="4"></circle>
+            <circle class="hex-node" style="animation-delay:0.25s" cx="329.9" cy="125" r="4"></circle>
+            <circle class="hex-node" style="animation-delay:0.5s" cx="329.9" cy="275" r="4"></circle>
+            <circle class="hex-node" style="animation-delay:0.75s" cx="200"   cy="350" r="4"></circle>
+            <circle class="hex-node" style="animation-delay:1s"   cx="70.1"  cy="275" r="4"></circle>
+            <circle class="hex-node" style="animation-delay:1.25s" cx="70.1"  cy="125" r="4"></circle>
+          </g>
+
+          <g id="pulseBars"></g>
+
+          <!-- core: rotated diamond panel + solid glyph mark, not a plain circle -->
+          <circle class="core-glow" cx="200" cy="200" r="60" fill="url(#coreGlowGrad)"></circle>
+          <rect class="core-center" x="164" y="164" width="72" height="72" rx="12"
+                transform="rotate(45 200 200)" fill="url(#coreFaceGrad)"></rect>
+          <path class="core-mark" fill-rule="evenodd"
+                d="M200,164 L235,236 L165,236 Z M183,212 L217,212 L217,222 L183,222 Z"></path>
+        </svg>
+        <div class="core-caption" id="coreCaption">STANDBY</div>
+      </div>
+
+      <div class="panel console-panel">
+        <h2 class="panel-title">Conversation</h2>
+        <div class="console" id="console">
+          <p class="empty-note">Boliye — main sun rahi hoon.</p>
+        </div>
+      </div>
+
+      <div class="input-dock">
+        <button class="dock-btn" id="micBtn" title="Toggle engine">🎙</button>
+        <input class="dock-input" id="textInput" placeholder="Type a command…">
+        <button class="dock-btn" id="sendBtn" title="Send">➤</button>
+        <button class="dock-btn" id="lensBtn" title="Screenshot">▣</button>
+      </div>
+
+      <div class="screenshot-preview" id="screenshotPreview" style="display:none;">
+        <img id="screenshotImg" alt="Latest screenshot">
+        <button class="ss-close" id="screenshotClose">✕</button>
+      </div>
+    </section>
+
+    <!-- RIGHT COLUMN — tool activity + quick actions -->
+    <aside class="col col-right panel">
+      <h2 class="panel-title">Tool Activity</h2>
+      <div class="tool-log" id="toolLog">
+        <p class="empty-note">No tool calls yet.</p>
+      </div>
+
+      <details class="action-group" open>
+        <summary>Quick Actions</summary>
+        <div class="action-list">
+          <button class="qa-btn" data-tool="open_app" data-args='{"app_name":"chrome"}'><span>🌐</span>Chrome</button>
+          <button class="qa-btn" data-tool="open_app" data-args='{"app_name":"vscode"}'><span>💻</span>VS Code</button>
+          <button class="qa-btn" data-tool="take_screenshot" data-args='{}'><span>▣</span>Screenshot</button>
+          <button class="qa-btn" data-tool="debug_error_screenshot" data-args='{}'><span>🐞</span>Debug error on screen</button>
+          <button class="qa-btn" data-tool="get_system_info" data-args='{}'><span>📊</span>System info</button>
+          <button class="qa-btn tpl-btn" data-template="Generate an image of [a cyberpunk city at night]"><span>🎨</span>Generate image</button>
+        </div>
+      </details>
+
+      <details class="action-group" open>
+        <summary>Work Mode</summary>
+        <div class="action-list">
+          <button class="qa-btn" data-tool="work_mode" data-args='{"profile":"coding"}'><span>💻</span>Coding</button>
+          <button class="qa-btn" data-tool="work_mode" data-args='{"profile":"study"}'><span>📚</span>Study</button>
+          <button class="qa-btn" data-tool="work_mode" data-args='{"profile":"meeting"}'><span>🗓</span>Meeting</button>
+          <button class="qa-btn" data-tool="work_mode" data-args='{"profile":"design"}'><span>🎨</span>Design</button>
+        </div>
+      </details>
+
+      <details class="action-group" open>
+        <summary>Games Hub</summary>
+        <div class="action-list">
+          <button class="qa-btn" id="gamesHubBtn"><span>🎮</span>Open Games Hub</button>
+        </div>
+      </details>
+
+      <details class="action-group">
+        <summary>Reminders &amp; Memory</summary>
+        <div class="action-list">
+          <button class="qa-btn" data-tool="list_reminders" data-args='{}'><span>⏰</span>List reminders</button>
+          <button class="qa-btn tpl-btn" data-template="Remind me to [take a break] in [20] minutes"><span>➕</span>Set a reminder</button>
+          <button class="qa-btn" data-tool="clipboard_history" data-args='{}'><span>📋</span>Clipboard history</button>
+          <button class="qa-btn tpl-btn" data-template="What did I ask about [topic] recently?"><span>🧠</span>Recall memory</button>
+          <button class="qa-btn" data-tool="organize_downloads" data-args='{}'><span>🗂️</span>Organize Downloads</button>
+        </div>
+      </details>
+
+      <details class="action-group">
+        <summary>WhatsApp &amp; Contacts</summary>
+        <div class="action-list">
+          <button class="qa-btn" data-tool="list_contacts" data-args='{}'><span>📇</span>List contacts</button>
+          <button class="qa-btn tpl-btn" data-template="Save contact [name] number [+91XXXXXXXXXX]"><span>➕</span>Add contact</button>
+          <button class="qa-btn tpl-btn" data-template="Send WhatsApp to [name] saying [message]"><span>💬</span>Send WhatsApp</button>
+        </div>
+      </details>
+
+      <details class="action-group">
+        <summary>Research &amp; Knowledge</summary>
+        <div class="action-list">
+          <button class="qa-btn tpl-btn" data-template="Research [topic] in depth"><span>🕸️</span>Deep research</button>
+          <button class="qa-btn tpl-btn" data-template="Ingest the codebase at [C:\path\to\project]"><span>📚</span>Ingest codebase</button>
+          <button class="qa-btn tpl-btn" data-template="In project [C:\path\to\project], how does [feature] work?"><span>🔮</span>Consult oracle</button>
+          <button class="qa-btn tpl-btn" data-template="Read Notion page [url or id]"><span>📓</span>Read Notion page</button>
+          <button class="qa-btn tpl-btn" data-template="Query Notion database [url or id]"><span>📓</span>Query Notion database</button>
+        </div>
+      </details>
+
+      <details class="action-group">
+        <summary>Mobile Control</summary>
+        <div class="action-list">
+          <button class="qa-btn" data-tool="mobile_device_status" data-args='{}'><span>📶</span>Check phone connection</button>
+          <button class="qa-btn" data-tool="mobile_battery_info" data-args='{}'><span>🔋</span>Phone battery info</button>
+          <button class="qa-btn tpl-btn" data-template="Push [C:\path\to\file] to my phone"><span>📤</span>Push file to phone</button>
+          <button class="qa-btn tpl-btn" data-template="Pull [/sdcard/DCIM/photo.jpg] from my phone"><span>📥</span>Pull file from phone</button>
+          <button class="qa-btn tpl-btn" data-template="Open [com.whatsapp] on my phone"><span>📱</span>Open app on phone</button>
+          <button class="qa-btn tpl-btn" data-template="Close [com.whatsapp] on my phone"><span>🛑</span>Close app on phone</button>
+          <button class="qa-btn tpl-btn" data-template="Turn [on] WiFi on my phone"><span>⚙️</span>Toggle phone WiFi</button>
+          <button class="qa-btn tpl-btn" data-template="Turn [on] Bluetooth on my phone"><span>⚙️</span>Toggle phone Bluetooth</button>
+        </div>
+      </details>
+
+      <details class="action-group">
+        <summary>Security</summary>
+        <div class="action-list">
+          <button class="qa-btn" data-tool="lock_system" data-args='{}'><span>🔒</span>Lock this PC</button>
+        </div>
+      </details>
+
+      <details class="action-group">
+        <summary>System Control</summary>
+        <div class="action-list">
+          <button class="qa-btn tpl-btn" data-template="Set volume to [50]"><span>🔊</span>Set volume</button>
+          <button class="qa-btn" data-tool="mute" data-args='{"enable":true}'><span>🔇</span>Mute</button>
+          <button class="qa-btn" data-tool="sleep_pc" data-args='{}'><span>😴</span>Sleep PC</button>
+          <button class="qa-btn tpl-btn" data-template="Shutdown PC in [30] seconds"><span>⏻</span>Shutdown PC</button>
+          <button class="qa-btn tpl-btn" data-template="Restart PC in [30] seconds"><span>🔄</span>Restart PC</button>
+          <button class="qa-btn" data-tool="cancel_shutdown" data-args='{}'><span>🛑</span>Cancel shutdown</button>
+        </div>
+      </details>
+
+      <details class="action-group">
+        <summary>Window &amp; Process</summary>
+        <div class="action-list">
+          <button class="qa-btn" data-tool="list_processes" data-args='{}'><span>📋</span>List processes</button>
+          <button class="qa-btn tpl-btn" data-template="Kill process [name or PID]"><span>🛑</span>Kill process</button>
+          <button class="qa-btn" data-tool="list_windows" data-args='{}'><span>🪟</span>List open windows</button>
+          <button class="qa-btn tpl-btn" data-template="Focus the window titled [name]"><span>🎯</span>Focus window</button>
+          <button class="qa-btn" data-tool="minimize_all_windows" data-args='{}'><span>➖</span>Show desktop</button>
+        </div>
+      </details>
+
+      <details class="action-group">
+        <summary>Input Automation</summary>
+        <div class="action-list">
+          <button class="qa-btn" data-tool="get_mouse_position" data-args='{}'><span>🖱️</span>Mouse position</button>
+          <button class="qa-btn tpl-btn" data-template="Move mouse to [x], [y]"><span>🖱️</span>Move mouse</button>
+          <button class="qa-btn tpl-btn" data-template="Click at [x], [y]"><span>👆</span>Click at coordinate</button>
+          <button class="qa-btn tpl-btn" data-template="Type [hello world]"><span>⌨️</span>Type text</button>
+          <button class="qa-btn tpl-btn" data-template="Press [ctrl+c]"><span>⌨️</span>Press key combo</button>
+        </div>
+      </details>
+
+      <details class="action-group">
+        <summary>File Management</summary>
+        <div class="action-list">
+          <button class="qa-btn tpl-btn" data-template="List files in [C:\path\to\folder]"><span>📁</span>List files</button>
+          <button class="qa-btn tpl-btn" data-template="Search for [*.pdf] in [C:\path\to\folder]"><span>🔍</span>Search files</button>
+          <button class="qa-btn tpl-btn" data-template="Create folder [C:\path\to\new folder]"><span>➕</span>Create folder</button>
+          <button class="qa-btn tpl-btn" data-template="Move [C:\path\to\file] to [C:\destination]"><span>➡️</span>Move file</button>
+          <button class="qa-btn tpl-btn" data-template="Move [C:\path\to\file] to Recycle Bin"><span>🗑️</span>Trash a file</button>
+        </div>
+      </details>
+
+      <details class="action-group">
+        <summary>Media &amp; Recording</summary>
+        <div class="action-list">
+          <button class="qa-btn tpl-btn" data-template="Record audio for [10] seconds"><span>🎙️</span>Record audio</button>
+          <button class="qa-btn tpl-btn" data-template="Record screen for [10] seconds"><span>🎬</span>Record screen</button>
+          <button class="qa-btn tpl-btn" data-template="Play [C:\path\to\file.mp4]"><span>▶️</span>Play a file</button>
+        </div>
+      </details>
+
+      <details class="action-group">
+        <summary>Automation &amp; Scheduling</summary>
+        <div class="action-list">
+          <button class="qa-btn tpl-btn" data-template="Shutdown PC in [30] minutes"><span>⏱️</span>Schedule shutdown</button>
+          <button class="qa-btn tpl-btn" data-template="Restart PC in [30] minutes"><span>⏱️</span>Schedule restart</button>
+        </div>
+      </details>
+
+      <details class="action-group">
+        <summary>Maintenance &amp; Utility</summary>
+        <div class="action-list">
+          <button class="qa-btn" data-tool="disk_usage_report" data-args='{}'><span>💽</span>Disk usage</button>
+          <button class="qa-btn" data-tool="system_uptime" data-args='{}'><span>⏳</span>System uptime</button>
+          <button class="qa-btn" data-tool="flush_dns" data-args='{}'><span>🌐</span>Flush DNS</button>
+          <button class="qa-btn" data-tool="clear_temp_files" data-args='{}'><span>🧹</span>Clear temp files</button>
+          <button class="qa-btn" data-tool="check_network" data-args='{}'><span>📡</span>Check network</button>
+        </div>
+      </details>
+
+      <details class="action-group">
+        <summary>Media &amp; Software</summary>
+        <div class="action-list">
+          <button class="qa-btn tpl-btn" data-template="Play [Kesariya] on YouTube"><span>🎵</span>Play on YouTube</button>
+          <button class="qa-btn tpl-btn" data-template="Play [Arijit Singh] on Spotify"><span>🎵</span>Play on Spotify</button>
+          <button class="qa-btn tpl-btn" data-template="Install [vs code]"><span>📦</span>Install software</button>
+        </div>
+      </details>
+
+      <details class="action-group">
+        <summary>PC Hardware</summary>
+        <div class="action-list">
+          <button class="qa-btn" data-tool="pc_toggle_bluetooth" data-args='{"enable":true}'><span>📶</span>Bluetooth on</button>
+          <button class="qa-btn" data-tool="pc_toggle_bluetooth" data-args='{"enable":false}'><span>📶</span>Bluetooth off</button>
+          <button class="qa-btn" data-tool="pc_toggle_wifi" data-args='{"enable":true}'><span>📡</span>WiFi on</button>
+          <button class="qa-btn tpl-btn" data-template="Set brightness to [70]"><span>🔆</span>Set brightness</button>
+        </div>
+      </details>
+
+      <details class="action-group">
+        <summary>Emergency</summary>
+        <div class="action-list">
+          <button class="qa-btn tpl-btn" data-template="Send my location to [contact name]"><span>📍</span>Share my location</button>
+        </div>
+      </details>
+
+      <details class="action-group">
+        <summary>Email</summary>
+        <div class="action-list">
+          <button class="qa-btn" data-tool="read_recent_emails" data-args='{"limit":5}'><span>📧</span>Recent emails</button>
+          <button class="qa-btn tpl-btn" data-template="Email [address] subject [subject] saying [message]"><span>✉️</span>Send email</button>
+        </div>
+      </details>
+
+      <details class="action-group">
+        <summary>Automation Rules</summary>
+        <div class="action-list">
+          <button class="qa-btn" data-tool="list_automation_rules" data-args='{}'><span>🔗</span>List rules</button>
+          <button class="qa-btn tpl-btn" data-template="When [app.exe] opens, [action]"><span>➕</span>Add app-trigger rule</button>
+          <button class="qa-btn tpl-btn" data-template="Every day at [09:00], [action]"><span>➕</span>Add time-trigger rule</button>
+        </div>
+      </details>
+
+      <details class="action-group">
+        <summary>Meeting &amp; Files</summary>
+        <div class="action-list">
+          <button class="qa-btn tpl-btn" data-template="Record and summarize a meeting for [15] minutes"><span>📝</span>Meeting notes</button>
+          <button class="qa-btn tpl-btn" data-template="Find files with [keyword] modified in the last [7] days"><span>🔍</span>Smart file search</button>
+        </div>
+      </details>
+
+      <details class="action-group">
+        <summary>Wellbeing</summary>
+        <div class="action-list">
+          <button class="qa-btn" data-tool="set_break_nudges" data-args='{"enable":true}'><span>☕</span>Break nudges on</button>
+          <button class="qa-btn" data-tool="set_break_nudges" data-args='{"enable":false}'><span>☕</span>Break nudges off</button>
+        </div>
+      </details>
+    </aside>
+
+  </div>
+</div>
+
+<div class="modal-overlay" id="settingsOverlay">
+  <div class="modal">
+    <h2 class="panel-title">Gemini API Key</h2>
+    <p class="modal-copy">
+      ARIA connects to Google's Gemini Live API using a key that stays
+      on this machine only — it's never sent anywhere except Google.
+      <span id="modalMaskedNote"></span>
+    </p>
+    <input class="modal-input" id="apiKeyInput" type="password" placeholder="Paste your Gemini API key…" autocomplete="off">
+    <p class="modal-error" id="modalError"></p>
+
+    <h2 class="panel-title spaced">Talking Persona</h2>
+    <p class="modal-copy">How ARIA talks to you — same abilities, different tone.</p>
+    <select class="modal-input" id="personaSelect">
+      <option value="assistant">Executive Assistant (default)</option>
+      <option value="boss_assistant">Boss ↔ Assistant (close working relationship)</option>
+      <option value="girlfriend_boyfriend">Close Partner (warm & caring)</option>
+      <option value="mother_child">Mother ↔ Child</option>
+      <option value="father_child">Father ↔ Child</option>
+      <option value="buddy">Best Buddy</option>
+      <option value="sibling">Sibling</option>
+    </select>
+
+    <h2 class="panel-title spaced">Reply Voice</h2>
+    <p class="modal-copy">Switch reply voice automatically based on your voice's pitch, or keep it fixed.</p>
+    <select class="modal-input" id="voiceModeSelect">
+      <option value="opposite">Auto — opposite of my voice</option>
+      <option value="female">Always female voice</option>
+      <option value="male">Always male voice</option>
+    </select>
+
+    <h2 class="panel-title spaced">Email Account (optional)</h2>
+    <p class="modal-copy">Use an app password, not your normal password — Gmail: myaccount.google.com/apppasswords</p>
+    <input class="modal-input" id="emailAddressInput" type="text" placeholder="you@gmail.com" autocomplete="off">
+    <input class="modal-input" id="emailPasswordInput" type="password" placeholder="App password" autocomplete="off">
+    <select class="modal-input" id="emailProviderSelect">
+      <option value="gmail">Gmail</option>
+      <option value="outlook">Outlook</option>
+    </select>
+
+    <div class="modal-actions">
+      <button class="modal-btn secondary" id="modalCancel">Cancel</button>
+      <button class="modal-btn primary" id="modalSave">Save</button>
+    </div>
+    <a class="modal-link" href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">Get a key from Google AI Studio →</a>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+<script src="/js/app.js"></script>
+</body>
+</html>

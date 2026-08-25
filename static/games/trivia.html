@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARIA Games — Trivia / Coding Quiz</title>
+<style>
+  :root{ --bg:#05070c; --panel:#0d1220; --border:#1c2740; --cyan:#4dd8e6; --amber:#e6a94d; --text:#dce8f0; --good:#5ee68a; --bad:#e65f5f; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; min-height:100vh; background:var(--bg); color:var(--text);
+        font-family:'Courier New', monospace; display:flex; flex-direction:column; align-items:center; padding:30px 16px; }
+  h1{ letter-spacing:3px; color:var(--cyan); margin-bottom:4px; }
+  #hud{ display:flex; gap:20px; margin-bottom:16px; font-size:14px; color:#7f93ab; }
+  #hud b{ color:var(--amber); }
+  #card{ width:100%; max-width:560px; background:var(--panel); border:1px solid var(--border);
+         border-radius:14px; padding:26px; }
+  #cat{ font-size:12px; color:var(--cyan); letter-spacing:2px; text-transform:uppercase; }
+  #question{ font-size:19px; margin:12px 0 20px; line-height:1.4; }
+  .opt{ display:block; width:100%; text-align:left; background:#111a2e; color:var(--text);
+        border:1px solid var(--border); border-radius:9px; padding:12px 14px; margin-bottom:10px;
+        cursor:pointer; font-family:inherit; font-size:15px; transition:border-color .15s; }
+  .opt:hover{ border-color:var(--cyan); }
+  .opt.correct{ border-color:var(--good); background:rgba(94,230,138,0.12); }
+  .opt.wrong{ border-color:var(--bad); background:rgba(230,95,95,0.12); }
+  #nextBtn{ margin-top:8px; padding:10px 20px; background:var(--cyan); border:none; border-radius:8px;
+            font-weight:bold; cursor:pointer; display:none; }
+  #done{ display:none; text-align:center; }
+  #done b{ color:var(--amber); font-size:26px; }
+  select{ background:#111a2e; color:var(--text); border:1px solid var(--border); border-radius:8px; padding:8px 10px; margin-bottom:14px; }
+  a.back{ color:#7f93ab; margin-top:20px; text-decoration:none; }
+</style>
+</head>
+<body>
+  <h1>🧠 TECH & CODING QUIZ</h1>
+  <div id="hud">
+    <span>Score: <b id="score">0</b></span>
+    <span>Question: <b id="qnum">0</b>/<b id="qtotal">0</b></span>
+    <span>Best: <b id="best">0</b></span>
+  </div>
+
+  <select id="catSelect">
+    <option value="all">All categories</option>
+    <option value="python">Python</option>
+    <option value="js">JavaScript</option>
+    <option value="webdev">Web / General CS</option>
+  </select>
+
+  <div id="card">
+    <div id="cat"></div>
+    <div id="question"></div>
+    <div id="options"></div>
+    <button id="nextBtn">Next →</button>
+    <div id="done">
+      <p>Quiz complete!</p>
+      <p>Final score: <b id="finalScore"></b></p>
+      <button id="restartBtn" style="margin-top:10px; padding:10px 20px; background:var(--cyan); border:none; border-radius:8px; font-weight:bold; cursor:pointer;">Play again</button>
+    </div>
+  </div>
+
+  <a class="back" href="index.html">← Games Hub</a>
+
+<script>
+const BANK = [
+  {cat:'python', q:'What does len([1,2,3]) return?', opts:['2','3','4','Error'], a:1},
+  {cat:'python', q:"Which keyword defines a function in Python?", opts:['func','def','function','lambda'], a:1},
+  {cat:'python', q:'What is the output of 3 // 2 in Python?', opts:['1.5','1','2','Error'], a:1},
+  {cat:'python', q:'Which data type is immutable in Python?', opts:['list','dict','tuple','set'], a:2},
+  {cat:'python', q:"What does 'pip' stand for (informally)?", opts:['Pip Installs Packages','Python Interface Program','Package Import Protocol','Python Internal Process'], a:0},
+  {cat:'js', q:"Which keyword declares a block-scoped variable in JS?", opts:['var','let','global','static'], a:1},
+  {cat:'js', q:"What does '===' check in JavaScript?", opts:['Value only','Type only','Value and type','Neither'], a:2},
+  {cat:'js', q:"Which method converts JSON text into a JS object?", opts:['JSON.stringify','JSON.parse','JSON.toObject','Object.parse'], a:1},
+  {cat:'js', q:'What is the result of typeof null in JS?', opts:["'null'","'undefined'","'object'","'boolean'"], a:2},
+  {cat:'js', q:"Which array method creates a new array with results of calling a function on every element?", opts:['forEach','map','filter','reduce'], a:1},
+  {cat:'webdev', q:'What does CSS stand for?', opts:['Creative Style Sheets','Cascading Style Sheets','Computer Style Sheets','Colorful Style Sheets'], a:1},
+  {cat:'webdev', q:'HTTP status code 404 means:', opts:['Server error','Unauthorized','Not found','Redirect'], a:2},
+  {cat:'webdev', q:'Which HTTP method is typically used to submit form data that creates a resource?', opts:['GET','POST','HEAD','TRACE'], a:1},
+  {cat:'webdev', q:'What does API stand for?', opts:['Application Programming Interface','Automated Program Instruction','Advanced Programming Index','Application Process Integration'], a:0},
+  {cat:'webdev', q:'In Big-O notation, binary search on a sorted array runs in:', opts:['O(n)','O(n log n)','O(log n)','O(1)'], a:2},
+];
+
+let pool, idx, score, best, answered;
+
+function loadBest(){ return parseInt(localStorage.getItem('aria_quiz_best') || '0', 10); }
+function saveBest(v){ try { localStorage.setItem('aria_quiz_best', v); } catch(e){} }
+
+function shuffle(arr){ return arr.map(v=>[Math.random(),v]).sort((a,b)=>a[0]-b[0]).map(v=>v[1]); }
+
+function startQuiz(){
+  const cat = document.getElementById('catSelect').value;
+  pool = shuffle(cat === 'all' ? BANK : BANK.filter(q=>q.cat===cat));
+  if (pool.length === 0) {
+    // Defensive guard — should be unreachable given the fixed <option>
+    // values match BANK's categories exactly, but a crash here would be
+    // an ugly blank-screen failure instead of a readable message.
+    pool = shuffle(BANK.slice());
+  }
+  idx = 0; score = 0; best = loadBest(); answered = false;
+  document.getElementById('score').textContent = score;
+  document.getElementById('best').textContent = best;
+  document.getElementById('qtotal').textContent = pool.length;
+  document.getElementById('done').style.display = 'none';
+  document.getElementById('card').querySelector('#question').style.display = 'block';
+  showQuestion();
+}
+
+function showQuestion(){
+  answered = false;
+  document.getElementById('nextBtn').style.display = 'none';
+  const item = pool[idx];
+  document.getElementById('qnum').textContent = idx+1;
+  document.getElementById('cat').textContent = item.cat.toUpperCase();
+  document.getElementById('question').textContent = item.q;
+  const optsDiv = document.getElementById('options');
+  optsDiv.innerHTML = '';
+  item.opts.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'opt';
+    btn.textContent = opt;
+    btn.addEventListener('click', () => selectAnswer(i));
+    optsDiv.appendChild(btn);
+  });
+}
+
+function selectAnswer(i){
+  if (answered) return;
+  answered = true;
+  const item = pool[idx];
+  const btns = document.querySelectorAll('.opt');
+  btns.forEach((b, bi) => {
+    if (bi === item.a) b.classList.add('correct');
+    else if (bi === i) b.classList.add('wrong');
+  });
+  if (i === item.a){
+    score += 10;
+    document.getElementById('score').textContent = score;
+  }
+  document.getElementById('nextBtn').style.display = 'inline-block';
+}
+
+function nextQuestion(){
+  idx++;
+  if (idx >= pool.length){
+    if (score > best){ best = score; saveBest(best); }
+    document.getElementById('question').style.display = 'none';
+    document.getElementById('options').innerHTML = '';
+    document.getElementById('nextBtn').style.display = 'none';
+    document.getElementById('cat').textContent = '';
+    document.getElementById('finalScore').textContent = `${score} / ${pool.length*10}`;
+    document.getElementById('done').style.display = 'block';
+    document.getElementById('best').textContent = best;
+    return;
+  }
+  showQuestion();
+}
+
+document.getElementById('nextBtn').addEventListener('click', nextQuestion);
+document.getElementById('restartBtn').addEventListener('click', startQuiz);
+document.getElementById('catSelect').addEventListener('change', startQuiz);
+
+startQuiz();
+</script>
+</body>
+</html>

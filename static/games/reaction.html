@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARIA Games — Reaction Test</title>
+<style>
+  :root{ --bg:#05070c; --cyan:#4dd8e6; --amber:#e6a94d; --good:#5ee68a; --bad:#e65f5f; --text:#dce8f0; }
+  body{ margin:0; min-height:100vh; background:var(--bg); color:var(--text);
+        font-family:'Courier New', monospace; display:flex; flex-direction:column;
+        align-items:center; padding:30px 16px; }
+  h1{ letter-spacing:3px; color:var(--cyan); }
+  #hud{ display:flex; gap:24px; margin-bottom:16px; font-size:15px; }
+  #zone{
+    width:340px; height:340px; border-radius:16px; display:flex; align-items:center;
+    justify-content:center; text-align:center; font-size:20px; font-weight:bold;
+    cursor:pointer; user-select:none; transition:background 0.1s;
+    background:#111a2e; border:2px solid #1c2740;
+  }
+  #zone.wait{ background:#16233c; color:#7f93ab; }
+  #zone.go{ background:var(--good); color:#05070c; }
+  #zone.early{ background:var(--bad); color:#fff; }
+  .hint{ color:#7f93ab; font-size:13px; margin-top:16px; }
+  a.back{ color:#7f93ab; margin-top:16px; text-decoration:none; }
+</style>
+</head>
+<body>
+  <h1>⚡ REACTION TEST</h1>
+  <div id="hud">
+    <span>Last: <b id="last">—</b> ms</span>
+    <span>Best: <b id="best">—</b> ms</span>
+    <span>Round: <b id="round">0</b>/5</span>
+  </div>
+  <div id="zone" class="wait">Click to start</div>
+  <p class="hint">Wait for green, then click as fast as you can. Click too early and you fail the round.</p>
+  <a class="back" href="index.html">← Games Hub</a>
+
+<script>
+const zone = document.getElementById('zone');
+let state = 'idle'; // idle | waiting | ready | done
+let timer, startTime, round = 0, results = [];
+
+function loadBest(){ const v = localStorage.getItem('aria_reaction_best'); return v ? parseInt(v,10) : null; }
+function saveBest(v){ try { localStorage.setItem('aria_reaction_best', v); } catch(e){} }
+document.getElementById('best').textContent = loadBest() ?? '—';
+
+function startRound(){
+  state = 'waiting';
+  zone.className = 'wait';
+  zone.textContent = 'Wait for green...';
+  const delay = 1000 + Math.random() * 2500;
+  timer = setTimeout(() => {
+    state = 'ready';
+    zone.className = 'go';
+    zone.textContent = 'CLICK NOW!';
+    startTime = performance.now();
+  }, delay);
+}
+
+zone.addEventListener('click', () => {
+  if (state === 'idle' || state === 'done'){
+    round = 0; results = [];
+    round++;
+    document.getElementById('round').textContent = round;
+    startRound();
+    return;
+  }
+  if (state === 'waiting'){
+    clearTimeout(timer);
+    state = 'early';
+    zone.className = 'early';
+    zone.textContent = 'Too early! Click to retry this round.';
+    state = 'retry';
+    return;
+  }
+  if (state === 'retry'){
+    startRound();
+    return;
+  }
+  if (state === 'ready'){
+    const rt = Math.round(performance.now() - startTime);
+    results.push(rt);
+    document.getElementById('last').textContent = rt;
+    const best = loadBest();
+    if (best === null || rt < best) saveBest(rt);
+    document.getElementById('best').textContent = loadBest();
+
+    if (round >= 5){
+      const avg = Math.round(results.reduce((a,b)=>a+b,0) / results.length);
+      state = 'done';
+      zone.className = 'wait';
+      zone.textContent = `Done! Avg ${avg}ms — click to play again`;
+    } else {
+      round++;
+      document.getElementById('round').textContent = round;
+      zone.className = 'wait';
+      zone.textContent = `${rt}ms — click for next round`;
+      state = 'next';
+      zone.onclick = null;
+      setTimeout(() => { zone.onclick = null; startRound(); }, 800);
+    }
+  }
+});
+</script>
+</body>
+</html>

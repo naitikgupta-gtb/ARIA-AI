@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ARIA Widget</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+<style>
+  html, body {
+    margin: 0; padding: 0; width: 100%; height: 100%;
+    background: transparent; overflow: hidden;
+    font-family: 'Segoe UI', 'Rajdhani', sans-serif;
+    -webkit-user-select: none; user-select: none;
+  }
+  #widget {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  svg { width: 84px; height: 84px; }
+  .hex-frame { fill: none; stroke: #17233a; }
+  .hex-frame.scan { stroke: #4dd8e6; stroke-width: 2; opacity: 0.7; }
+  .hex-rotor { transform-origin: 200px 200px; animation: spin 9s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .core-glow { opacity: 0.2; filter: blur(10px); animation: breathe 3.4s ease-in-out infinite; }
+  @keyframes breathe { 0%,100% { r: 54; opacity: 0.12; } 50% { r: 70; opacity: 0.28; } }
+  .core-center { stroke: #4dd8e6; stroke-width: 2; filter: drop-shadow(0 0 12px #4dd8e6); }
+  .core-center.speaking { stroke: #b6faff; filter: drop-shadow(0 0 24px #b6faff); }
+  .core-mark { fill: #b6faff; filter: drop-shadow(0 0 6px #4dd8e6); }
+  .core-center.speaking ~ .core-mark { fill: #ffffff; }
+  #label {
+    margin-top: 4px; color: #5d7089; font-size: 10px; letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+</style>
+</head>
+<body>
+  <div id="widget" title="Click to open ARIA">
+    <svg viewBox="0 0 400 400">
+      <defs>
+        <radialGradient id="g" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#e8fdff" stop-opacity="1"/>
+          <stop offset="35%" stop-color="#4dd8e6" stop-opacity="0.85"/>
+          <stop offset="100%" stop-color="#4dd8e6" stop-opacity="0"/>
+        </radialGradient>
+        <linearGradient id="f" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#12233a"/>
+          <stop offset="100%" stop-color="#0a1526"/>
+        </linearGradient>
+      </defs>
+      <g class="hex-rotor">
+        <polygon class="hex-frame scan" points="200,50 70.1,125 70.1,275 200,350 329.9,275 329.9,125"></polygon>
+      </g>
+      <circle class="core-glow" cx="200" cy="200" r="60" fill="url(#g)"></circle>
+      <rect id="coreCenter" class="core-center" x="164" y="164" width="72" height="72" rx="12"
+            transform="rotate(45 200 200)" fill="url(#f)"></rect>
+      <path class="core-mark" fill-rule="evenodd"
+            d="M200,164 L235,236 L165,236 Z M183,212 L217,212 L217,222 L183,222 Z"></path>
+    </svg>
+    <div id="label">STANDBY</div>
+  </div>
+
+<script>
+  const socket = io();
+  const coreCenter = document.getElementById('coreCenter');
+  const label = document.getElementById('label');
+
+  socket.on('status', (d) => {
+    const captions = { idle: 'STANDBY', connecting: 'LINKING…', connected: 'ONLINE', disconnected: 'OFFLINE' };
+    label.textContent = captions[d.state] || d.state.toUpperCase();
+  });
+  socket.on('speaking', (d) => coreCenter.classList.toggle('speaking', d.state));
+
+  // Clicking the widget brings the full ARIA window to the front —
+  // exposed from Python via pywebview's js_api bridge (see launcher.py).
+  document.getElementById('widget').addEventListener('click', () => {
+    if (window.pywebview && window.pywebview.api && window.pywebview.api.focus_main) {
+      window.pywebview.api.focus_main();
+    }
+  });
+</script>
+</body>
+</html>

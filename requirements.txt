@@ -1,0 +1,55 @@
+# ARIA — HUD frontend + backend, single process
+# Run: pip install -r requirements.txt
+
+# Core engine (unchanged from the original project)
+websockets>=12.0
+numpy>=1.24.0
+sounddevice>=0.4.6
+psutil>=5.9.0
+pyautogui>=0.9.54
+pyperclip>=1.8.2
+
+# Web backend (new — replaces PyQt6)
+Flask>=3.0.0
+Flask-SocketIO>=5.3.6
+python-socketio>=5.11.0
+python-dotenv>=1.0.0
+
+# Per-customer local API key storage (OS credential store)
+keyring>=24.0
+
+# Native window wrapper for the packaged app
+pywebview>=5.1
+# macOS backend for pywebview (Cocoa/WKWebView) — only installs on Mac,
+# ignored everywhere else
+pyobjc-framework-Cocoa>=10.0; sys_platform == 'darwin'
+pyobjc-framework-WebKit>=10.0; sys_platform == 'darwin'
+
+# Work Mode — window arrangement (Windows only; safe no-op elsewhere if missing)
+pygetwindow>=0.0.9; sys_platform == 'win32'
+pywin32>=306; sys_platform == 'win32'
+
+# System Control — volume/mute on Windows
+pycaw>=20230407; sys_platform == 'win32'
+comtypes>=1.2.0; sys_platform == 'win32'
+
+# File Management — recoverable delete (Recycle Bin / Trash, not permanent)
+send2trash>=1.8.0
+
+# WhatsApp module — pywhatkit drives WhatsApp Web directly, no Selenium/DOM
+# scraping and no stale CSS selectors to maintain.
+pywhatkit>=5.4
+
+# Screen Reading (Gemini Vision) + Live Search Synthesis
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+
+# Screenshot resizing for the HUD preview (also used directly by
+# make_icon.py, the dev tool that generates the app icon)
+Pillow>=10.0.0
+
+# Packaging
+pyinstaller>=6.6.0
+
+# Optional: cloud sync via Supabase (see modules/db_supabase.py)
+# supabase>=2.4.0

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARIA — Games Hub</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Rajdhani:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{ --bg:#05070c; --panel:#0d1220; --border:#1c2740; --cyan:#4dd8e6; --amber:#e6a94d; --text:#dce8f0; }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; min-height:100vh; background:radial-gradient(circle at 50% 0%, #0b1424, var(--bg));
+    color:var(--text); font-family:'Rajdhani', sans-serif; display:flex; flex-direction:column; align-items:center; padding:40px 20px;
+  }
+  h1{ font-family:'Orbitron', sans-serif; letter-spacing:3px; color:var(--cyan); text-shadow:0 0 20px rgba(77,216,230,0.5); }
+  p.sub{ color:#7f93ab; margin-top:-8px; }
+  .grid{ display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:20px; max-width:900px; width:100%; margin-top:30px; }
+  .card{
+    background:var(--panel); border:1px solid var(--border); border-radius:14px; padding:24px;
+    text-align:center; text-decoration:none; color:var(--text); transition:transform .15s, border-color .15s;
+  }
+  .card:hover{ transform:translateY(-4px); border-color:var(--cyan); }
+  .card .icon{ font-size:42px; }
+  .card h2{ font-family:'Orbitron', sans-serif; font-size:16px; letter-spacing:2px; color:var(--amber); margin:12px 0 6px; }
+  .card p{ color:#7f93ab; font-size:14px; margin:0; }
+  .back{ margin-top:36px; color:#7f93ab; font-size:13px; }
+</style>
+</head>
+<body>
+  <h1>◈ GAMES HUB</h1>
+  <p class="sub">Lightweight, offline, no ROMs or emulators required.</p>
+  <div class="grid">
+    <a class="card" href="snake.html">
+      <div class="icon">🐍</div>
+      <h2>SNAKE</h2>
+      <p>Classic grid snake. Arrow keys / WASD.</p>
+    </a>
+    <a class="card" href="tetris.html">
+      <div class="icon">🧱</div>
+      <h2>TETRIS</h2>
+      <p>Falling blocks. Clear lines, chase the high score.</p>
+    </a>
+    <a class="card" href="trivia.html">
+      <div class="icon">🧠</div>
+      <h2>TRIVIA / CODING QUIZ</h2>
+      <p>Tech &amp; programming quiz — the primary game module.</p>
+    </a>
+    <a class="card" href="2048.html">
+      <div class="icon">🔢</div>
+      <h2>2048</h2>
+      <p>Slide and merge tiles to reach 2048.</p>
+    </a>
+    <a class="card" href="memory.html">
+      <div class="icon">🧩</div>
+      <h2>MEMORY MATCH</h2>
+      <p>Flip cards, find all the pairs in the fewest moves.</p>
+    </a>
+    <a class="card" href="reaction.html">
+      <div class="icon">⚡</div>
+      <h2>REACTION TEST</h2>
+      <p>How fast are your reflexes? 5 rounds, track your best.</p>
+    </a>
+  </div>
+  <div class="back"><a href="/" style="color:#7f93ab;">← back to ARIA</a></div>
+</body>
+</html>

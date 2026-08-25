@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARIA Games — Memory Match</title>
+<style>
+  :root{ --bg:#05070c; --cyan:#4dd8e6; --amber:#e6a94d; --text:#dce8f0; }
+  body{ margin:0; min-height:100vh; background:var(--bg); color:var(--text);
+        font-family:'Courier New', monospace; display:flex; flex-direction:column;
+        align-items:center; padding:30px 16px; }
+  h1{ letter-spacing:3px; color:var(--cyan); }
+  #hud{ display:flex; gap:24px; margin-bottom:16px; font-size:15px; }
+  #board{
+    display:grid; grid-template-columns:repeat(4, 70px); grid-template-rows:repeat(4, 70px);
+    gap:8px;
+  }
+  .card{
+    background:#111a2e; border:1px solid #1c2740; border-radius:8px; display:flex;
+    align-items:center; justify-content:center; font-size:26px; cursor:pointer;
+    transition:background 0.15s, transform 0.15s;
+  }
+  .card.flipped{ background:#16233c; }
+  .card.matched{ background:rgba(94,230,138,0.15); border-color:#5ee68a; cursor:default; }
+  .hint{ color:#7f93ab; font-size:13px; margin-top:16px; }
+  a.back{ color:#7f93ab; margin-top:16px; text-decoration:none; }
+  #overlay{ position:fixed; inset:0; background:rgba(0,0,0,.7); display:none;
+            align-items:center; justify-content:center; flex-direction:column; }
+  #overlay button{ margin-top:14px; padding:10px 22px; background:var(--cyan); border:none;
+                    border-radius:8px; font-weight:bold; cursor:pointer; }
+</style>
+</head>
+<body>
+  <h1>🧩 MEMORY MATCH</h1>
+  <div id="hud">
+    <span>Moves: <b id="moves">0</b></span>
+    <span>Best: <b id="best">—</b></span>
+  </div>
+  <div id="board"></div>
+  <p class="hint">Flip two cards, find all the pairs in as few moves as possible.</p>
+  <a class="back" href="index.html">← Games Hub</a>
+
+  <div id="overlay">
+    <div id="overlayMsg" style="font-size:22px;">Solved!</div>
+    <button id="restartBtn">Play again</button>
+  </div>
+
+<script>
+const ICONS = ['🚀','🛰️','⚡','🔮','🎯','🧠','🛡️','💎'];
+let cards, flipped, matchedCount, moves, best, lock;
+
+function loadBest(){ const v = localStorage.getItem('aria_memory_best'); return v ? parseInt(v,10) : null; }
+function saveBest(v){ try { localStorage.setItem('aria_memory_best', v); } catch(e){} }
+
+function shuffle(arr){ return arr.map(v=>[Math.random(),v]).sort((a,b)=>a[0]-b[0]).map(v=>v[1]); }
+
+function render(){
+  const boardEl = document.getElementById('board');
+  boardEl.innerHTML = '';
+  cards.forEach((icon, i) => {
+    const card = document.createElement('div');
+    card.className = 'card' + (flipped.includes(i) ? ' flipped' : '') + (card_matched(i) ? ' matched' : '');
+    card.textContent = (flipped.includes(i) || card_matched(i)) ? icon : '❔';
+    card.addEventListener('click', () => flipCard(i));
+    boardEl.appendChild(card);
+  });
+  document.getElementById('moves').textContent = moves;
+  document.getElementById('best').textContent = best === null ? '—' : best;
+}
+
+let matchedSet = new Set();
+function card_matched(i){ return matchedSet.has(i); }
+
+function flipCard(i){
+  if (lock || flipped.includes(i) || matchedSet.has(i)) return;
+  flipped.push(i);
+  render();
+  if (flipped.length === 2){
+    moves++;
+    lock = true;
+    const [a,b] = flipped;
+    if (cards[a] === cards[b]){
+      matchedSet.add(a); matchedSet.add(b);
+      flipped = [];
+      lock = false;
+      render();
+      if (matchedSet.size === cards.length) finish();
+    } else {
+      setTimeout(() => { flipped = []; lock = false; render(); }, 700);
+    }
+  }
+}
+
+function finish(){
+  if (best === null || moves < best){ best = moves; saveBest(best); }
+  document.getElementById('overlayMsg').textContent = `Solved in ${moves} moves!`;
+  document.getElementById('overlay').style.display = 'flex';
+}
+
+function reset(){
+  cards = shuffle([...ICONS, ...ICONS]);
+  flipped = []; matchedSet = new Set(); moves = 0; lock = false; best = loadBest();
+  document.getElementById('overlay').style.display = 'none';
+  render();
+}
+
+document.getElementById('restartBtn').addEventListener('click', reset);
+reset();
+</script>
+</body>
+</html>

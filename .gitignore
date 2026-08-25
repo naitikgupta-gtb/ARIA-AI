@@ -1,0 +1,41 @@
+# ---- Secrets / local config (NEVER commit) ----
+.env
+*.env
+config.json
+**/ARIA/config.json
+*secret*
+*.pem
+*.key
+
+# ---- Local user data / databases (per-machine, not source) ----
+*.db
+*.sqlite
+*.sqlite3
+PyWhatKit_DB.txt
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+.venv/
+venv/
+env/
+
+# ---- Build / packaging output (generated, huge — don't commit) ----
+build/
+dist/
+*.spec.bak
+*.exe
+*.app
+*.dmg
+
+# ---- IDE / OS junk ----
+.vs/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ---- Logs ----
+*.log
