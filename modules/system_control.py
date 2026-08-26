@@ -46,6 +46,7 @@ def set_volume(level: int) -> str:
             except ImportError:
                 return "⚠️ Install pycaw + comtypes: pip install pycaw comtypes"
             except Exception as e:
+                print(f"[ARIA] system_control.set_volume: {type(e).__name__}: {e}")
                 return f"❌ Volume control failed: {type(e).__name__}: {e}"
         elif system == "Darwin":
             subprocess.run(["osascript", "-e", f"set volume output volume {level}"], capture_output=True)
@@ -68,6 +69,7 @@ def mute(enable: bool = True) -> str:
             except ImportError:
                 return "⚠️ Install pycaw + comtypes: pip install pycaw comtypes"
             except Exception as e:
+                print(f"[ARIA] system_control.mute: {type(e).__name__}: {e}")
                 return f"❌ Mute control failed: {type(e).__name__}: {e}"
         elif system == "Darwin":
             subprocess.run(["osascript", "-e", f"set volume output muted {'true' if enable else 'false'}"], capture_output=True)
