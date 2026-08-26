@@ -60,10 +60,12 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    # DEBUG BUILD: console=True so a console window opens alongside ARIA and
-    # shows any startup traceback. Once ARIA is confirmed launching cleanly,
-    # flip this back to console=False for the version you actually ship —
-    # see the note at the bottom of RUN_GUIDE.md.
+    # console=False = normal end-user build (no black terminal window).
+    # If ARIA fails to start on a machine and the on-screen error page
+    # (from launcher.py's _wait_for_server timeout) isn't enough to
+    # diagnose it, temporarily flip this to console=True, rebuild, and
+    # run the .exe from a Command Prompt — the real Python traceback
+    # will print there.
     console=False,
     disable_windowed_traceback=False,
     argv_emulation=False,

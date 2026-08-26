@@ -15,6 +15,7 @@ the front. Both windows share the same running backend/engine.
 """
 
 import os
+import socket
 import threading
 import time
 
@@ -23,6 +24,26 @@ import webview
 from app import app, socketio
 
 main_window = None
+
+
+def _wait_for_server(port: int, timeout: float = 30.0) -> bool:
+    """Actively polls the port instead of a fixed sleep. A fixed sleep
+    (the old `time.sleep(1.2)`) worked on the dev machine but breaks on
+    a fresh install elsewhere: PyInstaller's onefile bootloader has to
+    extract the whole bundle to a temp dir on first run, antivirus/
+    Windows Defender scans that freshly-written unsigned .exe (often
+    several seconds), and only then does Flask/SocketIO even start
+    binding — all of which can easily exceed 1.2s on a slower or
+    colder machine, causing the window to load 127.0.0.1 before
+    anything is listening ('refused to connect', with no retry)."""
+    start = time.time()
+    while time.time() - start < timeout:
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=0.5):
+                return True
+        except OSError:
+            time.sleep(0.3)
+    return False
 
 
 class WidgetApi:
@@ -48,7 +69,27 @@ def main():
     port = int(os.environ.get("ARIA_PORT", "8765"))
     t = threading.Thread(target=_run_server, daemon=True)
     t.start()
-    time.sleep(1.2)  # give Flask a moment to bind before the windows load it
+
+    if not _wait_for_server(port, timeout=30):
+        # Server never came up (crashed on startup, port blocked by
+        # another process, etc.) — show a real error instead of a
+        # silent/confusing browser 'refused to connect' page.
+        webview.create_window(
+            "ARIA — Startup Error",
+            html=(
+                "<body style='background:#05070c;color:#f66;font-family:sans-serif;"
+                "padding:40px;'><h2>ARIA failed to start</h2>"
+                "<p>The backend server didn't respond within 30 seconds. "
+                "This usually means antivirus is blocking it, another app is "
+                "using the port, or a required file is missing from this build.</p>"
+                "<p>Try: temporarily disable antivirus and retry, or run "
+                "<code>ARIA.exe</code> from a Command Prompt window to see the "
+                "actual error message.</p></body>"
+            ),
+            width=600, height=400,
+        )
+        webview.start()
+        return
 
     main_window = webview.create_window(
         "ARIA — Executive Assistant",
