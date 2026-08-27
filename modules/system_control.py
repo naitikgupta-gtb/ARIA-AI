@@ -31,7 +31,29 @@ def _get_windows_volume_interface():
         pass  # already initialized on this thread — fine, not an error
 
     devices = AudioUtilities.GetSpeakers()
-    interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+    try:
+        # Standard pycaw usage — works on most releases.
+        interface = devices.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+    except AttributeError:
+        # Some pycaw releases changed AudioUtilities.GetSpeakers() to return
+        # pycaw's own high-level `AudioDevice` wrapper (meant for listing
+        # devices) instead of the raw COM IMMDevice — that wrapper has no
+        # .Activate(). This is a known cross-version pycaw breakage, not an
+        # environment/machine issue. Bypass the wrapper and go straight to
+        # the same low-level COM calls pycaw uses internally, which are
+        # stable across versions.
+        from pycaw.pycaw import (
+            CLSID_MMDeviceEnumerator, IMMDeviceEnumerator, IMMDevice,
+            EDataFlow, ERole,
+        )
+        enumerator = comtypes.CoCreateInstance(
+            CLSID_MMDeviceEnumerator, IMMDeviceEnumerator,
+            comtypes.CLSCTX_INPROC_SERVER,
+        )
+        endpoint = enumerator.GetDefaultAudioEndpoint(EDataFlow.eRender.value, ERole.eMultimedia.value)
+        device = endpoint.QueryInterface(IMMDevice)
+        interface = device.Activate(IAudioEndpointVolume._iid_, CLSCTX_ALL, None)
+
     return cast(interface, POINTER(IAudioEndpointVolume))
 
 

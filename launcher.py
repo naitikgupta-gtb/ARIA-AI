@@ -13,8 +13,27 @@ the front. Both windows share the same running backend/engine.
 
     python launcher.py
 """
-
+# PyInstaller windowed (console=False) builds have NO console attached on
+# Windows, which means sys.stdout/sys.stderr are literally None — not a
+# dummy/no-op writer, just None. ANY print() anywhere in this app (there
+# are several, including one in app.py that runs on every single startup
+# right before the server binds) then raises "AttributeError: 'NoneType'
+# object has no attribute 'write'", which silently kills the whole process
+# before Flask ever starts listening — this is PyInstaller's own
+# officially documented behavior/fix, not a bug in PyInstaller itself:
+# https://pyinstaller.org/en/stable/common-issues-and-pitfalls.html
+# Whether this actually bites depends on how the .exe was launched (double-
+# click from Explorer is the highest-risk case), so it can look like it
+# "randomly" fails on some machines/launch methods and not others. Fixing
+# it here, before any other import, makes every print() in the app safe
+# regardless of console=True/False or how the .exe was launched.
+import sys
 import os
+if sys.stdout is None:
+    sys.stdout = open(os.devnull, "w")
+if sys.stderr is None:
+    sys.stderr = open(os.devnull, "w")
+
 import socket
 import threading
 import time

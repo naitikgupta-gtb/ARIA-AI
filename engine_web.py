@@ -132,6 +132,13 @@ class AriaWebEngine:
         self._current_voice = FEMALE_VOICE
         self._gender_tracker = GenderTracker()
         self._model_index = 0  # index into MODEL_CANDIDATES
+        # Mic-vs-speaker echo guard: ARIA's own TTS plays out of the same
+        # laptop speakers the mic is listening to. Without this, on any
+        # machine without headphones/hardware echo cancellation, the mic
+        # picks up ARIA's own voice and sends it straight back to Gemini
+        # as if the user said it — ARIA ends up talking to itself. Mic
+        # frames are suppressed (not sent) until this monotonic deadline.
+        self._suppress_mic_until = 0.0
 
     def stop(self):
         self.running = False
@@ -298,14 +305,21 @@ class AriaWebEngine:
                                 self.emit("status", {"state": "connecting", "detail": f"Switching to {wanted_voice} voice"})
                                 raise VoiceSwitchRequested()
 
-                await ws.send(enc({
-                    "realtimeInput": {
-                        "audio": {
-                            "mimeType": "audio/pcm;rate=16000",
-                            "data": base64.b64encode(pcm.tobytes()).decode(),
+                # Skip sending this frame to Gemini while ARIA's own TTS is
+                # still audibly playing (+ tail) — otherwise, on any machine
+                # without headphones/hardware echo cancellation, the mic
+                # picks up ARIA's own voice from the speakers and it ends up
+                # replying to itself (visible as garbled near-duplicates of
+                # ARIA's last line showing up as "user" messages).
+                if time.monotonic() >= self._suppress_mic_until:
+                    await ws.send(enc({
+                        "realtimeInput": {
+                            "audio": {
+                                "mimeType": "audio/pcm;rate=16000",
+                                "data": base64.b64encode(pcm.tobytes()).decode(),
+                            }
                         }
-                    }
-                }))
+                    }))
                 await asyncio.sleep(0.001)
 
     async def _recv(self, ws, audio_q):
@@ -364,6 +378,15 @@ class AriaWebEngine:
                 if d and "audio/pcm" in d.get("mimeType", ""):
                     raw_bytes = base64.b64decode(d["data"])
                     pcm = np.frombuffer(raw_bytes, dtype=np.int16).astype(np.float32) / 32768.0
+                    # Extend the mic-suppression window every time a new TTS
+                    # chunk arrives — while ARIA is actively speaking (and
+                    # for a short tail after each chunk, to cover speaker/
+                    # room echo decay), the mic's own pickup of that audio
+                    # must not get sent back to Gemini as if it were the
+                    # user talking. This is what _suppress_mic_until (see
+                    # __init__) exists for — it was previously declared but
+                    # never actually set/checked anywhere, so it did nothing.
+                    self._suppress_mic_until = time.monotonic() + max(len(pcm) / SPK_RATE + 0.5, 0.5)
                     try:
                         audio_q.put_nowait(pcm)
                     except Exception:

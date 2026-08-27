@@ -193,7 +193,14 @@ def on_quick_action(data):
 
 def _stats_loop():
     while True:
-        _emit("sysinfo", {"cpu": psutil.cpu_percent(), "ram": psutil.virtual_memory().percent})
+        try:
+            _emit("sysinfo", {"cpu": psutil.cpu_percent(), "ram": psutil.virtual_memory().percent})
+        except Exception as e:
+            # Without this, a single transient psutil/socketio hiccup
+            # kills this bare `while True` loop forever — the Session
+            # Core CPU/RAM rings then just stay blank for the rest of
+            # the session, with no error visible anywhere.
+            print(f"[ARIA] _stats_loop: {type(e).__name__}: {e}")
         time.sleep(2)
 
 
