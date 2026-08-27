@@ -66,7 +66,7 @@ exe = EXE(
     # diagnose it, temporarily flip this to console=True, rebuild, and
     # run the .exe from a Command Prompt — the real Python traceback
     # will print there.
-    console=False,
+    console=True,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
