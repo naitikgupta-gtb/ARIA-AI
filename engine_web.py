@@ -254,6 +254,18 @@ class AriaWebEngine:
                             self.emit("speaking", {"state": False})
                             continue
                         self.emit("speaking", {"state": True})
+                        # Extend the mic-suppression window HERE, right as
+                        # this chunk is actually being handed to the audio
+                        # backend for playback — not back when it arrived
+                        # over the network (that was the bug: if Gemini
+                        # streams a reply's audio faster than real-time
+                        # playback consumes it, a backlog builds up in
+                        # audio_q, and a receipt-time suppression window
+                        # expires long before this specific chunk is
+                        # actually audible). A generous 0.8s tail per chunk
+                        # covers speaker/room echo decay so the mic doesn't
+                        # pick up ARIA's own voice and reply to itself.
+                        self._suppress_mic_until = time.monotonic() + max(len(chunk) / SPK_RATE + 0.8, 0.8)
                         buf = np.concatenate([buf, chunk])
                         while len(buf) >= BUF:
                             stream.write(buf[:BUF])
@@ -378,15 +390,6 @@ class AriaWebEngine:
                 if d and "audio/pcm" in d.get("mimeType", ""):
                     raw_bytes = base64.b64decode(d["data"])
                     pcm = np.frombuffer(raw_bytes, dtype=np.int16).astype(np.float32) / 32768.0
-                    # Extend the mic-suppression window every time a new TTS
-                    # chunk arrives — while ARIA is actively speaking (and
-                    # for a short tail after each chunk, to cover speaker/
-                    # room echo decay), the mic's own pickup of that audio
-                    # must not get sent back to Gemini as if it were the
-                    # user talking. This is what _suppress_mic_until (see
-                    # __init__) exists for — it was previously declared but
-                    # never actually set/checked anywhere, so it did nothing.
-                    self._suppress_mic_until = time.monotonic() + max(len(pcm) / SPK_RATE + 0.5, 0.5)
                     try:
                         audio_q.put_nowait(pcm)
                     except Exception:

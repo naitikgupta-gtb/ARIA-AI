@@ -25,7 +25,7 @@ import requests
 from config import get_api_key
 
 MEETING_DIR = Path.home() / ".aria" / "meetings"
-TEXT_MODEL = "gemini-2.0-flash"
+TEXT_MODEL = "gemini-2.5-flash"  # gemini-2.0-flash was retired by Google on 2026-06-01; 2.5-flash is the official migration target (itself scheduled to retire 2026-10-16 - re-check ai.google.dev/gemini-api/docs/changelog before then)
 GEN_URL = f"https://generativelanguage.googleapis.com/v1beta/models/{TEXT_MODEL}:generateContent"
 
 
